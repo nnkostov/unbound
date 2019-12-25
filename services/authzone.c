@@ -2380,6 +2380,10 @@ create_synth_cname(uint8_t* qname, size_t qname_len, struct regional* region,
 		return 0; /* rdatalen in DNAME rdata is malformed */
 	if(dname_valid(dtarg, dtarglen) != dtarglen)
 		return 0; /* DNAME RR has malformed rdata */
+	if(qname_len == 0)
+		return 0; /* too short */
+	if(qname_len <= node->namelen)
+		return 0; /* qname too short for dname removal */
 
 	/* synthesize a CNAME */
 	newlen = synth_cname_buf(qname, qname_len, node->namelen,
@@ -5526,9 +5530,12 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 				xfr->task_transfer->rr_scan_num == 0 &&
 				LDNS_ANCOUNT(wire)==1) {
 				verbose(VERB_ALGO, "xfr to %s ended, "
-					"IXFR reply that zone has serial %u",
+					"IXFR reply that zone has serial %u,"
+					" fallback from IXFR to AXFR",
 					xfr->task_transfer->master->host,
 					(unsigned)serial);
+				xfr->task_transfer->ixfr_fail = 1;
+				*gonextonfail = 0;
 				return 0;
 			}
 
